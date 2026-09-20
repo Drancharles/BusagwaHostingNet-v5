@@ -2,13 +2,14 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BUSAGWA HOSTING v5 - Universal</title>
+<title>BUSAGWA HOSTING v5</title>
 <style>
 body{background:#000;color:#0f0;font-family:sans-serif;padding:20px}
 .card{border:2px solid #0f0;border-radius:15px;padding:20px;max-width:500px;margin:auto}
 input,select{width:100%;padding:12px;margin:8px 0;background:#111;color:#0f0;border:1px solid #0f0;border-radius:8px;box-sizing:border-box}
 button{width:100%;padding:14px;background:#0f0;color:#000;font-weight:bold;border:none;border-radius:8px;font-size:16px;cursor:pointer}
 .log{margin-top:15px;background:#111;padding:10px;border-radius:8px;white-space:pre-wrap;font-size:13px}
+.hidden{display:none}
 </style>
 </head>
 <body>
@@ -17,7 +18,7 @@ button{width:100%;padding:14px;background:#0f0;color:#000;font-weight:bold;borde
 <h3>Deploy Anything</h3>
 
 <label>Project Type</label>
-<select id="type">
+<select id="type" onchange="updateForm()">
 <option value="bot">WhatsApp Bot</option>
 <option value="telegram">Telegram Bot</option>
 <option value="discord">Discord Bot</option>
@@ -26,26 +27,53 @@ button{width:100%;padding:14px;background:#0f0;color:#000;font-weight:bold;borde
 </select>
 
 <input id="repoUrl" placeholder="GitHub Repo URL (https://github.com/user/repo)">
-<input id="botToken" placeholder="BOT_TOKEN / TELEGRAM_TOKEN (optional for web)">
-<input id="ownerID" placeholder="OWNER_ID / OWNER_NUMBER (e.g 267712345678)">
-<input id="envVars" placeholder="Extra ENV (optional) e.g SESSION_ID=xxx;PREFIX=.">
+
+<div id="botFields">
+<input id="botToken" placeholder="BOT_TOKEN / TELEGRAM_TOKEN">
+<input id="ownerID" placeholder="OWNER_ID / OWNER_NUMBER (2677...)">
+<input id="envVars" placeholder="Extra ENV e.g SESSION_ID=xxx;PREFIX=.">
+</div>
+
+<div id="webFields" class="hidden">
+<input id="webEnv" placeholder="Extra ENV (optional) e.g API_URL=...">
+</div>
 
 <button onclick="deploy()">DEPLOY NOW</button>
 <div id="log" class="log">Ready to deploy...</div>
 </div>
 
 <script>
+function updateForm(){
+ const t = document.getElementById('type').value;
+ const botF = document.getElementById('botFields');
+ const webF = document.getElementById('webFields');
+ if(t === 'static'){
+   botF.classList.add('hidden');
+   webF.classList.remove('hidden');
+ } else {
+   botF.classList.remove('hidden');
+   webF.classList.add('hidden');
+ }
+}
+
 async function deploy(){
  const log = document.getElementById('log');
  const repoUrl = document.getElementById('repoUrl').value.trim();
- const botToken = document.getElementById('botToken').value.trim();
- const ownerID = document.getElementById('ownerID').value.trim();
  const type = document.getElementById('type').value;
- const extra = document.getElementById('envVars').value.trim();
+ 
+ let botToken = document.getElementById('botToken').value.trim();
+ let ownerID = document.getElementById('ownerID').value.trim();
+ let extra = document.getElementById('envVars').value.trim();
+ 
+ if(type === 'static'){
+   botToken = '';
+   ownerID = '';
+   extra = document.getElementById('webEnv').value.trim();
+ }
  
  if(!repoUrl){ log.textContent='❌ Enter GitHub Repo URL'; return; }
  
- log.textContent='⏳ Deploying '+type+'... Please wait 10s';
+ log.textContent='⏳ Deploying '+type+'... wait 10s';
  
  try{
   const res = await fetch('/api/deploy', {
@@ -54,15 +82,10 @@ async function deploy(){
     body: JSON.stringify({ repoUrl, botToken, ownerID, type, extraEnv: extra })
   });
   const data = await res.json();
-  if(data.success){
-    log.textContent='✅ SUCCESS!\n'+JSON.stringify(data, null, 2);
-  } else {
-    log.textContent='❌ FAILED:\n'+ (data.error || JSON.stringify(data));
-  }
- }catch(e){
-  log.textContent='❌ Error: '+e.message;
- }
+  log.textContent = data.success ? '✅ SUCCESS!\n'+JSON.stringify(data,null,2) : '❌ FAILED:\n'+(data.error || JSON.stringify(data));
+ }catch(e){ log.textContent='❌ Error: '+e.message; }
 }
+updateForm();
 </script>
 </body>
- </html>
+</html>
