@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/deploy.js": {
-      "maxDuration": 60
+      "maxDuration": 30
     }
   }
 }
