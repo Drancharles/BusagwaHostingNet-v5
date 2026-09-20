@@ -3,59 +3,76 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
-
+  
   try {
-    const { repo, envVars } = req.body;
+    const { repoUrl, botToken, ownerID, type, extraEnv } = req.body;
+    if (!repoUrl) return res.status(400).json({ error: 'Repo URL required' });
+
     const RENDER_API_KEY = process.env.RENDER_API_KEY;
+    if (!RENDER_API_KEY) return res.status(500).json({ error: 'RENDER_API_KEY missing in Vercel Env' });
 
-    if (!RENDER_API_KEY) {
-      return res.status(500).json({ error: 'RENDER_API_KEY missing in Vercel Settings > Environment Variables' });
+    const finalOwner = ownerID || '267000000000';
+    const finalToken = botToken || 'default';
+
+    // Build env vars list
+    let envVars = [];
+    if (type === 'telegram') {
+      envVars.push({ key: 'TELEGRAM_TOKEN', value: finalToken });
+      envVars.push({ key: 'BOT_TOKEN', value: finalToken });
+    } else if (type === 'discord') {
+      envVars.push({ key: 'DISCORD_TOKEN', value: finalToken });
+      envVars.push({ key: 'BOT_TOKEN', value: finalToken });
+    } else {
+      envVars.push({ key: 'BOT_TOKEN', value: finalToken });
     }
-    if (!repo) {
-      return res.status(400).json({ error: 'GitHub repo URL required' });
+    envVars.push({ key: 'OWNER_ID', value: finalOwner });
+    envVars.push({ key: 'OWNER_NUMBER', value: finalOwner });
+    envVars.push({ key: 'NUMBER', value: finalOwner });
+
+    // Parse extra env: SESSION_ID=xxx;PREFIX=.
+    if (extraEnv) {
+      extraEnv.split(';').forEach(pair => {
+        const [k, v] = pair.split('=');
+        if (k && v) envVars.push({ key: k.trim(), value: v.trim() });
+      });
     }
 
-    // Clean GitHub URL: https://github.com/user/repo -> https://github.com/user/repo
-    const cleanRepo = repo.replace('.git','').trim();
+    const serviceName = `${type}-${Date.now()}`;
     
-    // Deploy to Render
-    const renderRes = await fetch('https://api.render.com/v1/services', {
+    let payload = {
+      type: type === 'static' ? 'static_site' : 'web_service',
+      name: serviceName,
+      repo: repoUrl,
+      branch: 'main',
+      plan: 'free',
+      envVars: envVars
+    };
+
+    if (type === 'static') {
+      payload.buildCommand = '';
+      payload.publishPath = './';
+    } else {
+      payload.buildCommand = 'npm install';
+      payload.startCommand = 'npm start';
+    }
+
+    const response = await fetch('https://api.render.com/v1/services', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RENDER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        type: 'web_service',
-        name: `busagwa-${Date.now()}`,
-        autoDeploy: 'yes',
-        repo: cleanRepo,
-        branch: 'main',
-        plan: 'free',
-        runtime: 'node',
-        buildCommand: 'npm install',
-        startCommand: 'npm start',
-        envVars: envVars ? Object.entries(envVars).map(([key,value])=>({key,value})) : []
-      })
+      body: JSON.stringify(payload)
     });
 
-    const data = await renderRes.json();
-
-    if (!renderRes.ok) {
-      return res.status(400).json({ error: data.message || JSON.stringify(data), details: data });
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(400).json({ error: data.message || JSON.stringify(data).slice(0, 500) });
     }
 
-    return res.status(200).json({ 
-      success: true, 
-      message: '🚀 Bot deploying to Render!',
-      serviceId: data.id,
-      dashboard: `https://dashboard.render.com/web/${data.id}`,
-      logs: `https://dashboard.render.com/web/${data.id}/logs`
-    });
+    return res.status(200).json({ success: true, type: type, message: `${type} deployed! Check Render dashboard`, service: data });
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
-}
+                                  }
