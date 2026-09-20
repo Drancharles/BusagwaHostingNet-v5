@@ -1,37 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BUSAGWA HOSTING v4</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BUSAGWA HOSTING v5 - Universal</title>
 <style>
-body{background:#000;color:#fff;font-family:sans-serif;padding:15px}
-.card{background:#111;border:1px solid #00ff88;border-radius:12px;padding:15px;margin:10px 0}
-.btn{background:#00ff88;color:#000;padding:12px 20px;border:none;border-radius:8px;font-weight:bold;width:100%}
-input{width:100%;padding:10px;background:#000;border:1px solid #333;color:#fff;border-radius:8px;margin:5px 0}
+body{background:#000;color:#0f0;font-family:sans-serif;padding:20px}
+.card{border:2px solid #0f0;border-radius:15px;padding:20px;max-width:500px;margin:auto}
+input,select{width:100%;padding:12px;margin:8px 0;background:#111;color:#0f0;border:1px solid #0f0;border-radius:8px;box-sizing:border-box}
+button{width:100%;padding:14px;background:#0f0;color:#000;font-weight:bold;border:none;border-radius:8px;font-size:16px;cursor:pointer}
+.log{margin-top:15px;background:#111;padding:10px;border-radius:8px;white-space:pre-wrap;font-size:13px}
 </style>
 </head>
 <body>
-<h2 style="color:#00ff88">BUSAGWA HOSTING v4</h2>
+<h2 style="text-align:center">BUSAGWA HOSTING v5<br>UNIVERSAL DEPLOYER</h2>
 <div class="card">
-<h3>Deploy Bot</h3>
-<input id="repo" placeholder="https://github.com/user/repo">
-<input id="token" placeholder="BOT_TOKEN (optional)">
-<button class="btn" onclick="deploy()" id="btn">DEPLOY NOW</button>
-<p id="status"></p>
+<h3>Deploy Anything</h3>
+
+<label>Project Type</label>
+<select id="type">
+<option value="bot">WhatsApp Bot</option>
+<option value="telegram">Telegram Bot</option>
+<option value="discord">Discord Bot</option>
+<option value="node">Node.js Web App</option>
+<option value="static">Static Website (HTML)</option>
+</select>
+
+<input id="repoUrl" placeholder="GitHub Repo URL (https://github.com/user/repo)">
+<input id="botToken" placeholder="BOT_TOKEN / TELEGRAM_TOKEN (optional for web)">
+<input id="ownerID" placeholder="OWNER_ID / OWNER_NUMBER (e.g 267712345678)">
+<input id="envVars" placeholder="Extra ENV (optional) e.g SESSION_ID=xxx;PREFIX=.">
+
+<button onclick="deploy()">DEPLOY NOW</button>
+<div id="log" class="log">Ready to deploy...</div>
 </div>
+
 <script>
 async function deploy(){
- let b=document.getElementById('btn'),s=document.getElementById('status'),repo=document.getElementById('repo').value,token=document.getElementById('token').value;
- if(!repo){s.textContent='Paste GitHub URL';return}
- b.textContent='Deploying...';
+ const log = document.getElementById('log');
+ const repoUrl = document.getElementById('repoUrl').value.trim();
+ const botToken = document.getElementById('botToken').value.trim();
+ const ownerID = document.getElementById('ownerID').value.trim();
+ const type = document.getElementById('type').value;
+ const extra = document.getElementById('envVars').value.trim();
+ 
+ if(!repoUrl){ log.textContent='❌ Enter GitHub Repo URL'; return; }
+ 
+ log.textContent='⏳ Deploying '+type+'... Please wait 10s';
+ 
  try{
-  let r=await fetch('/api/deploy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repo,envVars:{BOT_TOKEN:token}})});
-  let d=await r.json();
-  s.textContent=d.message||d.error;
-  if(d.success) s.innerHTML+='<br><a href="'+d.dashboard+'" target="_blank" style="color:#00ff88">Open Dashboard</a>';
-  b.textContent=d.success?'DONE ✅':'TRY AGAIN';
- }catch(e){s.textContent='Error: '+e.message;b.textContent='RETRY'}
+  const res = await fetch('/api/deploy', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ repoUrl, botToken, ownerID, type, extraEnv: extra })
+  });
+  const data = await res.json();
+  if(data.success){
+    log.textContent='✅ SUCCESS!\n'+JSON.stringify(data, null, 2);
+  } else {
+    log.textContent='❌ FAILED:\n'+ (data.error || JSON.stringify(data));
+  }
+ }catch(e){
+  log.textContent='❌ Error: '+e.message;
+ }
 }
 </script>
 </body>
-</html>
+ </html>
