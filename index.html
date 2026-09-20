@@ -16,7 +16,6 @@ button{width:100%;padding:14px;background:#0f0;color:#000;font-weight:bold;borde
 <h2 style="text-align:center">BUSAGWA HOSTING v5<br>UNIVERSAL DEPLOYER</h2>
 <div class="card">
 <h3>Deploy Anything</h3>
-
 <label>Project Type</label>
 <select id="type" onchange="updateForm()">
 <option value="bot">WhatsApp Bot</option>
@@ -25,65 +24,41 @@ button{width:100%;padding:14px;background:#0f0;color:#000;font-weight:bold;borde
 <option value="node">Node.js Web App</option>
 <option value="static">Static Website (HTML)</option>
 </select>
-
-<input id="repoUrl" placeholder="GitHub Repo URL (https://github.com/user/repo)">
-
+<input id="repoUrl" placeholder="GitHub Repo URL">
 <div id="botFields">
 <input id="botToken" placeholder="BOT_TOKEN / TELEGRAM_TOKEN">
-<input id="ownerID" placeholder="OWNER_ID / OWNER_NUMBER (2677...)">
+<input id="ownerID" placeholder="OWNER_ID (2677...)">
 <input id="envVars" placeholder="Extra ENV e.g SESSION_ID=xxx;PREFIX=.">
 </div>
-
 <div id="webFields" class="hidden">
-<input id="webEnv" placeholder="Extra ENV (optional) e.g API_URL=...">
+<input id="webEnv" placeholder="Extra ENV optional">
 </div>
-
 <button onclick="deploy()">DEPLOY NOW</button>
 <div id="log" class="log">Ready to deploy...</div>
 </div>
-
 <script>
 function updateForm(){
- const t = document.getElementById('type').value;
- const botF = document.getElementById('botFields');
- const webF = document.getElementById('webFields');
- if(t === 'static'){
-   botF.classList.add('hidden');
-   webF.classList.remove('hidden');
- } else {
-   botF.classList.remove('hidden');
-   webF.classList.add('hidden');
- }
+ const t=document.getElementById('type').value;
+ const botF=document.getElementById('botFields');
+ const webF=document.getElementById('webFields');
+ if(t==='static'){botF.classList.add('hidden');webF.classList.remove('hidden');}
+ else{botF.classList.remove('hidden');webF.classList.add('hidden');}
 }
-
 async function deploy(){
- const log = document.getElementById('log');
- const repoUrl = document.getElementById('repoUrl').value.trim();
- const type = document.getElementById('type').value;
- 
- let botToken = document.getElementById('botToken').value.trim();
- let ownerID = document.getElementById('ownerID').value.trim();
- let extra = document.getElementById('envVars').value.trim();
- 
- if(type === 'static'){
-   botToken = '';
-   ownerID = '';
-   extra = document.getElementById('webEnv').value.trim();
- }
- 
- if(!repoUrl){ log.textContent='❌ Enter GitHub Repo URL'; return; }
- 
- log.textContent='⏳ Deploying '+type+'... wait 10s';
- 
+ const log=document.getElementById('log');
+ const repoUrl=document.getElementById('repoUrl').value.trim();
+ const type=document.getElementById('type').value;
+ let botToken=document.getElementById('botToken').value.trim();
+ let ownerID=document.getElementById('ownerID').value.trim();
+ let extra=document.getElementById('envVars').value.trim();
+ if(type==='static'){botToken='';ownerID='';extra=document.getElementById('webEnv').value.trim();}
+ if(!repoUrl){log.textContent='❌ Enter Repo URL';return;}
+ log.textContent='⏳ Deploying '+type+'...';
  try{
-  const res = await fetch('/api/deploy', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ repoUrl, botToken, ownerID, type, extraEnv: extra })
-  });
-  const data = await res.json();
-  log.textContent = data.success ? '✅ SUCCESS!\n'+JSON.stringify(data,null,2) : '❌ FAILED:\n'+(data.error || JSON.stringify(data));
- }catch(e){ log.textContent='❌ Error: '+e.message; }
+  const res=await fetch('/api/deploy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repoUrl,botToken,ownerID,type,extraEnv:extra})});
+  const data=await res.json();
+  log.textContent=data.success?'✅ SUCCESS!\n'+JSON.stringify(data,null,2):'❌ FAILED:\n'+(data.error||JSON.stringify(data));
+ }catch(e){log.textContent='❌ Error: '+e.message;}
 }
 updateForm();
 </script>
